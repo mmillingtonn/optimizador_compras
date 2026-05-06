@@ -77,7 +77,7 @@ def resolver(productos, proveedores, periodos, precios, costes, coste_almacen, s
 
     # Restricciones
 
-    # 1. Balance de stock
+    # Balance de stock
     for producto in productos:
         for periodo in periodos:
             compras_periodo = pulp.lpSum(
@@ -89,7 +89,7 @@ def resolver(productos, proveedores, periodos, precios, costes, coste_almacen, s
             else:
                 problema += stock[producto.id, periodo.t] == stock[producto.id, periodo.t - 1] + compras_periodo - demanda[producto.id, periodo.t]
 
-    # 2. Caducidad: no se puede comprar ni tener stock despues de la fecha de caducidad
+    # Caducidad
     for producto in productos:
         for periodo in periodos:
             if periodo.t > producto.caducidad:
@@ -97,15 +97,15 @@ def resolver(productos, proveedores, periodos, precios, costes, coste_almacen, s
                     problema += compras[producto.id, proveedor.id, periodo.t] == 0
                 problema += stock[producto.id, periodo.t] == 0
 
-    # 3. MOQ
-    M = 100000
+    #  MOQ
+    M = 100000 
     for producto in productos:
         for proveedor in proveedores:
             for periodo in periodos:
-                problema += compras[producto.id, proveedor.id, periodo.t] >= producto.moq * pedido[producto.id, proveedor.id, periodo.t]
+                problema += compras[producto.id, proveedor.id, periodo.t] >= producto.moq * pedido[producto.id, proveedor.id, periodo.t] #si no hay pedido compras tiene que ser 0
                 problema += compras[producto.id, proveedor.id, periodo.t] <= M * pedido[producto.id, proveedor.id, periodo.t]
 
-    # 4. Pedido minimo por proveedor
+    # Pedido minimo por proveedor
     for proveedor in proveedores:
         for periodo in periodos:
             problema += pulp.lpSum(
@@ -113,21 +113,21 @@ def resolver(productos, proveedores, periodos, precios, costes, coste_almacen, s
                 for producto in productos
             ) >= proveedor.pedido_minimo * pedido_proveedor[proveedor.id, periodo.t]
 
-    # 5. Capacidad del almacen
+    # Capacidad del almacen
     for periodo in periodos:
         problema += pulp.lpSum(
             stock[producto.id, periodo.t]
             for producto in productos
         ) <= capacidad_almacen
 
-    # 6. Solo comprar productos que el proveedor suministra
+    # Solo comprar productos que el proveedor suministra
     for producto in productos:
         for proveedor in proveedores:
             if producto.id not in proveedor.productos_disponibles:
                 for periodo in periodos:
                     problema += compras[producto.id, proveedor.id, periodo.t] == 0
 
-    # 7. si se hace pedido de cualquier producto al proveedor, pedido_proveedor = 1
+    #si se hace pedido de cualquier producto al proveedor, pedido_proveedor = 1
     for proveedor in proveedores:
         for periodo in periodos:
             for producto in productos:
